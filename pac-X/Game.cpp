@@ -34,24 +34,47 @@ const std::array<std::array<int, 28>, 31> MAZE_TEMPLATE = { {
     {{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}}
 } };
 
-Game::Game(sf::RenderWindow& gameWindow) : window(gameWindow), isPaused(false), score(0) {
-    // Initialize Pac-Man
-    pacman.setRadius(CELL_SIZE / 2.0f - 2.0f); // Slightly smaller than cell
-    pacman.setFillColor(sf::Color::Yellow);
-    pacman.setOrigin(sf::Vector2f(CELL_SIZE / 2.0f - 2.0f, CELL_SIZE / 2.0f - 2.0f));
+Game::Game(sf::RenderWindow& gameWindow) :
+    window(gameWindow),
+    isPaused(false),
+    score(0),
+    currentDirection(Direction::NONE),
+    queuedDirection(Direction::NONE) {
 
-    position = sf::Vector2f(CELL_SIZE * 14.0f, CELL_SIZE * 23.0f);
+    float mazeWidth = MAZE_WIDTH * CELL_SIZE;
+    float mazeHeight = MAZE_HEIGHT * CELL_SIZE;
+    sf::Vector2u windowSize = window.getSize();
+    float offsetX = (windowSize.x - mazeWidth) / 2.0f;
+    float offsetY = (windowSize.y - mazeHeight) / 2.0f;
+
+    // Initialize Pac-Man with larger size
+    pacman.setRadius(CELL_SIZE / 2.4f);
+    pacman.setFillColor(sf::Color::Yellow);
+    pacman.setOrigin(sf::Vector2f(pacman.getRadius(), pacman.getRadius()));
+
+    position = sf::Vector2f(
+        CELL_SIZE * 14.0f + offsetX,
+        CELL_SIZE * 15.0f + offsetY
+    );
     pacman.setPosition(position);
 
-    pacmanSpeed = 150.0f;
+    pacmanSpeed = 120.0f;
     pacmanAngle = 0.0f;
 
-    // Initialize game elements
     initializeMaze();
     createWalls();
     createDots();
 }
+
 void Game::createDots() {
+    sf::Vector2u windowSize = window.getSize();
+    float mazeWidth = MAZE_WIDTH * CELL_SIZE;
+    float mazeHeight = MAZE_HEIGHT * CELL_SIZE;
+
+    // Calculate the offset needed to center the maze
+    float offsetX = (windowSize.x - mazeWidth) / 2.0f;
+    float offsetY = (windowSize.y - mazeHeight) / 2.0f;
+
     float dotRadius = 2.0f;
     float powerPelletRadius = 8.0f;
 
@@ -62,8 +85,8 @@ void Game::createDots() {
                 sf::CircleShape dot(dotRadius);
                 dot.setFillColor(sf::Color::White);
                 dot.setPosition(sf::Vector2f(
-                    x * CELL_SIZE + CELL_SIZE / 2 - dotRadius,
-                    y * CELL_SIZE + CELL_SIZE / 2 - dotRadius
+                    x * CELL_SIZE + offsetX + CELL_SIZE / 2 - dotRadius,
+                    y * CELL_SIZE + offsetY + CELL_SIZE / 2 - dotRadius
                 ));
 
                 // Special positions for power pellets
@@ -71,8 +94,8 @@ void Game::createDots() {
                     (x == 1 && y == 23) || (x == 26 && y == 23)) {
                     dot.setRadius(powerPelletRadius);
                     dot.setPosition(sf::Vector2f(
-                        x * CELL_SIZE + CELL_SIZE / 2 - powerPelletRadius,
-                        y * CELL_SIZE + CELL_SIZE / 2 - powerPelletRadius
+                        x * CELL_SIZE + offsetX + CELL_SIZE / 2 - powerPelletRadius,
+                        y * CELL_SIZE + offsetY + CELL_SIZE / 2 - powerPelletRadius
                     ));
                     powerPellets.push_back(dot);
                 }
@@ -83,6 +106,8 @@ void Game::createDots() {
         }
     }
 }
+
+
 
 
 bool Game::checkCollision(const sf::Vector2f& newPos) {
@@ -109,6 +134,7 @@ bool Game::checkCollision(const sf::Vector2f& newPos) {
 
     return false;
 }
+
 
 void Game::checkDotCollection() {
 	sf::Vector2f gridPos = getGridPosition(position);
@@ -142,21 +168,37 @@ void Game::checkDotCollection() {
 	}
 }
 
+
 sf::Vector2f Game::getGridPosition(const sf::Vector2f& position) const {
+    // Calculate maze offsets
+    float mazeWidth = MAZE_WIDTH * CELL_SIZE;
+    float mazeHeight = MAZE_HEIGHT * CELL_SIZE;
+    sf::Vector2u windowSize = window.getSize();
+    float offsetX = (windowSize.x - mazeWidth) / 2.0f;
+    float offsetY = (windowSize.y - mazeHeight) / 2.0f;
+
+    // Adjust position by the offset before converting to grid coordinates
     return sf::Vector2f(
-        static_cast<float>(static_cast<int>(position.x / CELL_SIZE)),
-        static_cast<float>(static_cast<int>(position.y / CELL_SIZE))
+        static_cast<float>(static_cast<int>((position.x - offsetX) / CELL_SIZE)),
+        static_cast<float>(static_cast<int>((position.y - offsetY) / CELL_SIZE))
     );
 }
 
-
 void Game::createWalls() {
+    sf::Vector2u windowSize = window.getSize();
+    float mazeWidth = MAZE_WIDTH * CELL_SIZE;
+    float mazeHeight = MAZE_HEIGHT * CELL_SIZE;
+
+    // Calculate the offset needed to center the maze
+    float offsetX = (windowSize.x - mazeWidth) / 2.0f;
+    float offsetY = (windowSize.y - mazeHeight) / 2.0f;
+
     for (int i = 0; i < MAZE_HEIGHT; ++i) {
         for (int j = 0; j < MAZE_WIDTH; ++j) {
             if (mazeData[i][j] == 1) {
                 sf::RectangleShape wall(sf::Vector2f(CELL_SIZE, CELL_SIZE));
                 wall.setFillColor(sf::Color::Blue);
-                wall.setPosition(sf::Vector2f(j * CELL_SIZE, i * CELL_SIZE)); // Fix for E0415 and E0140
+                wall.setPosition(sf::Vector2f(j * CELL_SIZE + offsetX, i * CELL_SIZE + offsetY));
                 walls.push_back(wall);
             }
         }
@@ -175,47 +217,112 @@ void Game::handleEvent(const sf::Event& event) {
     }
 }
 
-
 void Game::handleInput(float deltaTime) {
     if (isPaused) return;
 
-    sf::Vector2f movement(0.0f, 0.0f);
-
+    // Only update queued direction when a key is newly pressed
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Left)) {
-        movement.x = -1.0f;
-        pacmanAngle = 180.0f;
+        queuedDirection = Direction::LEFT;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
-        movement.x = 1.0f;
-        pacmanAngle = 0.0f;
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Right)) {
+        queuedDirection = Direction::RIGHT;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
-        movement.y = -1.0f;
-        pacmanAngle = 270.0f;
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Up)) {
+        queuedDirection = Direction::UP;
     }
-    if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
-        movement.y = 1.0f;
-        pacmanAngle = 90.0f;
+    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::Down)) {
+        queuedDirection = Direction::DOWN;
     }
 
-    if (movement.x != 0.0f && movement.y != 0.0f) {
-        movement /= std::sqrt(2.0f);
-    }
-
-    // Test new position before moving
-    sf::Vector2f newPosition = position + movement * pacmanSpeed * deltaTime;
-    if (!checkCollision(newPosition)) {
-        position = newPosition;
-        pacman.setPosition(position);
-        pacman.setRotation(sf::degrees(pacmanAngle));
+    // If no current direction, try to move in queued direction immediately
+    if (currentDirection == Direction::NONE && queuedDirection != Direction::NONE) {
+        if (canMove(queuedDirection)) {
+            currentDirection = queuedDirection;
+            queuedDirection = Direction::NONE;
+        }
     }
 }
 
 void Game::update(float deltaTime) {
     if (isPaused) return;
-    // We'll add collision detection and other game logic here later
-	checkDotCollection();
+
+    // Always try to move in queued direction if we have one
+    if (queuedDirection != Direction::NONE) {
+        if (canMove(queuedDirection)) {
+            currentDirection = queuedDirection;
+            queuedDirection = Direction::NONE;
+        }
+    }
+
+    // Continue moving in current direction
+    if (currentDirection != Direction::NONE) {
+        moveInDirection(currentDirection, deltaTime);
+    }
+
+    checkDotCollection();
 }
+
+
+bool Game::canMove(Direction dir) {
+    sf::Vector2f testPos = position;
+    float moveAmount = CELL_SIZE / 4.0f;  // Small test movement
+
+    switch (dir) {
+    case Direction::LEFT:
+        testPos.x -= moveAmount;
+        break;
+    case Direction::RIGHT:
+        testPos.x += moveAmount;
+        break;
+    case Direction::UP:
+        testPos.y -= moveAmount;
+        break;
+    case Direction::DOWN:
+        testPos.y += moveAmount;
+        break;
+    default:
+        return false;
+    }
+
+    return !checkCollision(testPos);
+}
+
+
+void Game::moveInDirection(Direction dir, float deltaTime) {
+    sf::Vector2f movement(0.0f, 0.0f);
+    float moveSpeed = pacmanSpeed * deltaTime;
+
+    switch (dir) {
+    case Direction::LEFT:
+        movement.x = -moveSpeed;
+        pacmanAngle = 180.0f;
+        break;
+    case Direction::RIGHT:
+        movement.x = moveSpeed;
+        pacmanAngle = 0.0f;
+        break;
+    case Direction::UP:
+        movement.y = -moveSpeed;
+        pacmanAngle = 270.0f;
+        break;
+    case Direction::DOWN:
+        movement.y = moveSpeed;
+        pacmanAngle = 90.0f;
+        break;
+    }
+
+    sf::Vector2f newPos = position + movement;
+    if (!checkCollision(newPos)) {
+        position = newPos;
+        pacman.setPosition(position);
+        pacman.setRotation(sf::degrees(pacmanAngle));
+    }
+    else {
+        // Hit a wall, stop moving in this direction
+        currentDirection = Direction::NONE;
+    }
+}
+
 
 void Game::render() {
     // Draw walls

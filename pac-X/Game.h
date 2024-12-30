@@ -5,6 +5,13 @@
 
 class Game {
 private:
+    enum class Direction {
+        NONE,
+        LEFT,
+        RIGHT,
+        UP,
+        DOWN
+    };
     sf::RenderWindow& window;
 
     // Pac-Man properties
@@ -16,7 +23,7 @@ private:
     // Maze properties
     static constexpr int MAZE_WIDTH = 28;
     static constexpr int MAZE_HEIGHT = 31;
-    static constexpr float CELL_SIZE = 20.0f;
+    static constexpr float CELL_SIZE = 32.0f;
 
     // Game elements
     std::vector<sf::RectangleShape> walls;
@@ -35,6 +42,8 @@ private:
     bool checkCollision(const sf::Vector2f& newPos);
     void checkDotCollection();
     sf::Vector2f getGridPosition(const sf::Vector2f& position) const;
+    bool canMove(Direction dir);
+    void moveInDirection(Direction dir, float deltaTime);
 
 public:
     Game(sf::RenderWindow& window);
@@ -44,4 +53,6 @@ public:
     void update(float deltaTime);
     void render();
     int getScore() const { return score; }
+    Direction currentDirection; // Add this line
+    Direction queuedDirection;
 };
