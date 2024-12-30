@@ -76,10 +76,11 @@ void Game::createDots() {
     float offsetY = (windowSize.y - mazeHeight) / 2.0f;
 
     float dotRadius = 2.0f;
-    float powerPelletRadius = 8.0f;
+    float powerPelletRadius = 9.0f;
 
     for (int y = 0; y < MAZE_HEIGHT; ++y) {
         for (int x = 0; x < MAZE_WIDTH; ++x) {
+            if (y == 14) continue;
             if (mazeData[y][x] == 0) {  // Empty space
                 // Create regular dot
                 sf::CircleShape dot(dotRadius);
@@ -91,7 +92,7 @@ void Game::createDots() {
 
                 // Special positions for power pellets
                 if ((x == 1 && y == 3) || (x == 26 && y == 3) ||
-                    (x == 1 && y == 23) || (x == 26 && y == 23)) {
+                    (x == 1 && y == 26) || (x == 26 && y == 26)) {
                     dot.setRadius(powerPelletRadius);
                     dot.setPosition(sf::Vector2f(
                         x * CELL_SIZE + offsetX + CELL_SIZE / 2 - powerPelletRadius,

@@ -23,7 +23,7 @@ private:
     // Maze properties
     static constexpr int MAZE_WIDTH = 28;
     static constexpr int MAZE_HEIGHT = 31;
-    static constexpr float CELL_SIZE = 32.0f;
+    static constexpr float CELL_SIZE = 34.0f;
 
     // Game elements
     std::vector<sf::RectangleShape> walls;
