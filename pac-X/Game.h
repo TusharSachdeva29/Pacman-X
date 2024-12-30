@@ -1,7 +1,4 @@
-#pragma once
-#include <SFML/Graphics.hpp>
-#include <vector>
-#include <array>
+#include "Ghost.h"
 
 class Game {
 private:
@@ -45,14 +42,27 @@ private:
     bool canMove(Direction dir);
     void moveInDirection(Direction dir, float deltaTime);
 
+    // ghost properties
+    static const int NUM_GHOSTS = 4;
+    std::array<Ghost, NUM_GHOSTS> ghosts;
+    bool powerMode;
+    float powerModeTimer;
+    static constexpr float POWER_MODE_DURATION = 6.0f;
+
+    // Add these new private methods:
+    void initializeGhosts();
+    void updateGhosts(float deltaTime);
+    void checkGhostCollisions();
+
 public:
     Game(sf::RenderWindow& window);
 
     void handleEvent(const sf::Event& event);
     void handleInput(float deltaTime);
     void update(float deltaTime);
-    void render();
+	void render();  
     int getScore() const { return score; }
+    void reset();
     Direction currentDirection; // Add this line
     Direction queuedDirection;
 };

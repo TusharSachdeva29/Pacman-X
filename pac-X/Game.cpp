@@ -34,12 +34,37 @@ const std::array<std::array<int, 28>, 31> MAZE_TEMPLATE = { {
     {{1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1}}
 } };
 
+void Game::reset() {
+    position = sf::Vector2f(
+        CELL_SIZE * 14.0f + (window.getSize().x - MAZE_WIDTH * CELL_SIZE) / 2.0f,
+        CELL_SIZE * 15.0f + (window.getSize().y - MAZE_HEIGHT * CELL_SIZE) / 2.0f
+    );
+    pacman.setPosition(position);
+    currentDirection = Direction::NONE;
+    queuedDirection = Direction::NONE;
+
+    powerMode = false;
+    powerModeTimer = 0.0f;
+
+    for (auto& ghost : ghosts) {
+        ghost.reset();
+    }
+}
+
 Game::Game(sf::RenderWindow& gameWindow) :
     window(gameWindow),
     isPaused(false),
     score(0),
     currentDirection(Direction::NONE),
-    queuedDirection(Direction::NONE) {
+    queuedDirection(Direction::NONE),
+	powerMode(false),
+	powerModeTimer(0.0f),
+    ghosts{ 
+        Ghost(GhostType::BLINKY, sf::Vector2f(), CELL_SIZE), 
+        Ghost(GhostType::PINKY, sf::Vector2f(), CELL_SIZE), 
+        Ghost(GhostType::INKY, sf::Vector2f(), CELL_SIZE), 
+        Ghost(GhostType::CLYDE, sf::Vector2f(), CELL_SIZE) 
+    } {// Explicitly initialize each Ghost object
 
     float mazeWidth = MAZE_WIDTH * CELL_SIZE;
     float mazeHeight = MAZE_HEIGHT * CELL_SIZE;
@@ -64,7 +89,97 @@ Game::Game(sf::RenderWindow& gameWindow) :
     initializeMaze();
     createWalls();
     createDots();
+	initializeGhosts();
 }
+
+void Game::initializeGhosts() {
+    sf::Vector2u windowSize = window.getSize();
+    float mazeWidth = MAZE_WIDTH * CELL_SIZE;
+    float mazeHeight = MAZE_HEIGHT * CELL_SIZE;
+    float offsetX = (windowSize.x - mazeWidth) / 2.0f;
+    float offsetY = (windowSize.y - mazeHeight) / 2.0f;
+
+    // Initialize ghost starting positions (in the center ghost house)
+    sf::Vector2f ghostHouseCenter(
+        14.0f * CELL_SIZE + offsetX,
+        14.0f * CELL_SIZE + offsetY
+    );
+
+    // Initialize each ghost with different positions and types
+    ghosts[0] = Ghost(GhostType::BLINKY,
+        sf::Vector2f(ghostHouseCenter.x, ghostHouseCenter.y - CELL_SIZE),
+        CELL_SIZE);
+
+    ghosts[1] = Ghost(GhostType::PINKY,
+        sf::Vector2f(ghostHouseCenter.x - CELL_SIZE, ghostHouseCenter.y),
+        CELL_SIZE);
+
+    ghosts[2] = Ghost(GhostType::INKY,
+        sf::Vector2f(ghostHouseCenter.x, ghostHouseCenter.y),
+        CELL_SIZE);
+
+    ghosts[3] = Ghost(GhostType::CLYDE,
+        sf::Vector2f(ghostHouseCenter.x + CELL_SIZE, ghostHouseCenter.y),
+        CELL_SIZE);
+
+    powerMode = false;
+    powerModeTimer = 0.0f;
+}
+
+void Game::updateGhosts(float deltaTime) {
+    if (powerMode) {
+        powerModeTimer -= deltaTime;
+        if (powerModeTimer <= 0.0f) {
+            powerMode = false;
+            for (auto& ghost : ghosts) {
+                ghost.setFrightened(false);
+            }
+        }
+    }
+
+    for (auto& ghost : ghosts) {
+        ghost.update(deltaTime, position);
+    }
+}
+void Game::checkGhostCollisions() {
+    for (auto& ghost : ghosts) {
+        if (ghost.isColliding(position, pacman.getRadius())) {
+            if (powerMode && ghost.isFrightened()) {
+                // Ghost is eaten
+                ghost.reset();
+                score += 200;
+            }
+            else if (!powerMode) {
+                // Pac-Man is caught
+                // TODO: Implement death sequence
+                reset();
+            }
+        }
+    }
+}
+
+// Add to your Game::update method
+void Game::update(float deltaTime) {
+    if (isPaused) return;
+
+    // Existing movement code...
+    if (queuedDirection != Direction::NONE) {
+        if (canMove(queuedDirection)) {
+            currentDirection = queuedDirection;
+            queuedDirection = Direction::NONE;
+        }
+    }
+
+    if (currentDirection != Direction::NONE) {
+        moveInDirection(currentDirection, deltaTime);
+    }
+
+    updateGhosts(deltaTime);
+    checkGhostCollisions();
+    checkDotCollection();
+}
+
+
 
 void Game::createDots() {
     sf::Vector2u windowSize = window.getSize();
@@ -107,6 +222,10 @@ void Game::createDots() {
         }
     }
 }
+
+
+
+
 
 
 
@@ -154,19 +273,24 @@ void Game::checkDotCollection() {
 			++it;
 		}
 	}
-	for (auto it = powerPellets.begin(); it != powerPellets.end(); ) {
-		sf::Vector2f pelletPos = it->getPosition();
-		sf::Vector2f pelletGridPos = getGridPosition(pelletPos);
-		int pelletGridX = static_cast<int>(pelletGridPos.x);
-		int pelletGridY = static_cast<int>(pelletGridPos.y);
-		if (gridX == pelletGridX && gridY == pelletGridY) {
-			it = powerPellets.erase(it);
-			score += 50;
-		}
-		else {
-			++it;
-		}
-	}
+    for (auto it = powerPellets.begin(); it != powerPellets.end(); ) {
+        sf::Vector2f pelletPos = it->getPosition();
+        sf::Vector2f pelletGridPos = getGridPosition(pelletPos);
+        int pelletGridX = static_cast<int>(pelletGridPos.x);
+        int pelletGridY = static_cast<int>(pelletGridPos.y);
+        if (gridX == pelletGridX && gridY == pelletGridY) {
+            it = powerPellets.erase(it);
+            score += 50;
+            powerMode = true;
+            powerModeTimer = POWER_MODE_DURATION;
+            for (auto& ghost : ghosts) {
+                ghost.setFrightened(true);
+            }
+        }
+        else {
+            ++it;
+        }
+    }
 }
 
 
@@ -243,27 +367,6 @@ void Game::handleInput(float deltaTime) {
         }
     }
 }
-
-void Game::update(float deltaTime) {
-    if (isPaused) return;
-
-    // Always try to move in queued direction if we have one
-    if (queuedDirection != Direction::NONE) {
-        if (canMove(queuedDirection)) {
-            currentDirection = queuedDirection;
-            queuedDirection = Direction::NONE;
-        }
-    }
-
-    // Continue moving in current direction
-    if (currentDirection != Direction::NONE) {
-        moveInDirection(currentDirection, deltaTime);
-    }
-
-    checkDotCollection();
-}
-
-
 bool Game::canMove(Direction dir) {
     sf::Vector2f testPos = position;
     float moveAmount = CELL_SIZE / 4.0f;  // Small test movement
@@ -324,23 +427,27 @@ void Game::moveInDirection(Direction dir, float deltaTime) {
     }
 }
 
+void Game::render() {  
+   // Draw walls  
+   for (const auto& wall : walls) {  
+       window.draw(wall);  
+   }  
 
-void Game::render() {
-    // Draw walls
-    for (const auto& wall : walls) {
-        window.draw(wall);
-    }
+   // Draw dots  
+   for (const auto& dot : dots) {  
+       window.draw(dot);  
+   }  
 
-    // Draw dots
-    for (const auto& dot : dots) {
-        window.draw(dot);
-    }
+   // Draw power pellets  
+   for (const auto& pellet : powerPellets) {  
+       window.draw(pellet);  
+   }  
 
-    // Draw power pellets
-    for (const auto& pellet : powerPellets) {
-        window.draw(pellet);
-    }
+   // Draw Pac-Man  
+   window.draw(pacman);  
 
-    // Draw Pac-Man
-    window.draw(pacman);
+   // Draw ghosts  
+   for (auto& ghost : ghosts) {  
+       ghost.render(window);  
+   }  
 }
