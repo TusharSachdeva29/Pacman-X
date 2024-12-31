@@ -47,6 +47,7 @@ void Ghost::update(float deltaTime, const sf::Vector2f& pacmanPos) {
     shape.setPosition(position);
 }
 
+
 void Ghost::updateState(float deltaTime) {
     stateTimer -= deltaTime;
 
@@ -64,25 +65,103 @@ void Ghost::updateState(float deltaTime) {
             currentState = GhostState::CHASE;
             stateTimer = CHASE_DURATION;
             speed = NORMAL_SPEED;
-            shape.setFillColor(sf::Color::White);
+            // Restore original color based on ghost type
+            switch (type) {
+            case GhostType::BLINKY:
+                shape.setFillColor(sf::Color::Red);
+                break;
+            case GhostType::PINKY:
+                shape.setFillColor(sf::Color::Magenta);
+                break;
+            case GhostType::INKY:
+                shape.setFillColor(sf::Color::Cyan);
+                break;
+            case GhostType::CLYDE:
+                shape.setFillColor(sf::Color(255, 165, 0)); // Orange
+                break;
+            }
             break;
         }
     }
 }
-
 void Ghost::updateMovement(float deltaTime, const sf::Vector2f& pacmanPos) {
-    sf::Vector2f target = calculateTarget(pacmanPos);
+    if (!isReleased) return;
 
-    // Calculate direction to target
-    sf::Vector2f toTarget = target - position;
-    float length = std::sqrt(toTarget.x * toTarget.x + toTarget.y * toTarget.y);
+    // Get current grid position
+    sf::Vector2f currentGridPos = {
+        std::floor((position.x - mazeOffsetX) / cellSize) * cellSize + mazeOffsetX + cellSize / 2,
+        std::floor((position.y - mazeOffsetY) / cellSize) * cellSize + mazeOffsetY + cellSize / 2
+    };
 
-    if (length > 0) {
-        direction = sf::Vector2f(toTarget.x / length, toTarget.y / length);
+    // Check if we're close to grid center
+    float distToGridCenter = std::sqrt(
+        std::pow(position.x - currentGridPos.x, 2) +
+        std::pow(position.y - currentGridPos.y, 2)
+    );
+
+    bool atIntersection = distToGridCenter < 2.0f;
+
+    if (atIntersection || direction == sf::Vector2f(0, 0)) {
+        sf::Vector2f target = calculateTarget(pacmanPos);
+
+        // Possible directions
+        std::vector<sf::Vector2f> possibleDirs = {
+            {1, 0}, {-1, 0}, {0, 1}, {0, -1}
+        };
+
+        // Remove opposite direction unless no other choice
+        if (direction != sf::Vector2f(0, 0)) {
+            possibleDirs.erase(
+                std::remove_if(possibleDirs.begin(), possibleDirs.end(),
+                    [this](const sf::Vector2f& dir) {
+                        return dir.x == -direction.x && dir.y == -direction.y;
+                    }),
+                possibleDirs.end()
+            );
+        }
+
+        // Filter out directions that would hit walls
+        possibleDirs.erase(
+            std::remove_if(possibleDirs.begin(), possibleDirs.end(),
+                [this, &currentGridPos](const sf::Vector2f& dir) {
+                    sf::Vector2f testPos = currentGridPos + sf::Vector2f(dir.x * cellSize, dir.y * cellSize);
+                    return checkCollision(testPos, mazeData, mazeOffsetX, mazeOffsetY, cellSize);
+                }),
+            possibleDirs.end()
+        );
+
+        if (!possibleDirs.empty()) {
+            // Choose direction closest to target
+            float bestDistance = std::numeric_limits<float>::max();
+            sf::Vector2f bestDir;
+
+            for (const auto& dir : possibleDirs) {
+                sf::Vector2f nextPos = currentGridPos + sf::Vector2f(dir.x * cellSize, dir.y * cellSize);
+                float dist = std::sqrt(
+                    std::pow(nextPos.x - target.x, 2) +
+                    std::pow(nextPos.y - target.y, 2)
+                );
+
+                if (dist < bestDistance) {
+                    bestDistance = dist;
+                    bestDir = dir;
+                }
+            }
+            direction = bestDir;
+        }
     }
 
-    // Move ghost
-    position += direction * speed * deltaTime;
+    // Move in current direction
+    sf::Vector2f newPos = position + direction * speed * deltaTime;
+    if (!checkCollision(newPos, mazeData, mazeOffsetX, mazeOffsetY, cellSize)) {
+        position = newPos;
+    }
+    else {
+        // If we hit a wall, stop and wait for next intersection
+        direction = sf::Vector2f(0, 0);
+    }
+
+    shape.setPosition(position);
 }
 
 sf::Vector2f Ghost::calculateTarget(const sf::Vector2f& pacmanPos) {
@@ -175,10 +254,28 @@ void Ghost::render(sf::RenderWindow& window) {
     window.draw(shape);
 }
 
+
 void Ghost::reset() {
     position = startPosition;
     currentState = GhostState::SCATTER;
     stateTimer = SCATTER_DURATION;
     speed = NORMAL_SPEED;
     direction = sf::Vector2f(0.0f, 0.0f);
+    isReleased = false;
+
+    // Reset to original color
+    switch (type) {
+    case GhostType::BLINKY:
+        shape.setFillColor(sf::Color::Red);
+        break;
+    case GhostType::PINKY:
+        shape.setFillColor(sf::Color::Magenta);
+        break;
+    case GhostType::INKY:
+        shape.setFillColor(sf::Color::Cyan);
+        break;
+    case GhostType::CLYDE:
+        shape.setFillColor(sf::Color(255, 165, 0)); // Orange
+        break;
+    }
 }

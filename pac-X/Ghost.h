@@ -79,12 +79,21 @@ public:
     bool isFrightened() const { return currentState == GhostState::FRIGHTENED; }
     float getStartPositionY() const { return startPosition.y; }
     void setPositionY(float y) { position.y = y; }
+    void setMazeData(const std::array<std::array<int, 28>, 31>& maze) { mazeData = maze; }
+        //void setMazeOffsets(float offsetX, float offsetY);
+    void setMazeOffsets(float offsetX, float offsetY) {
+        mazeOffsetX = offsetX;
+        mazeOffsetY = offsetY;
+    }
     void setShapePosition(const sf::Vector2f& pos) { shape.setPosition(pos); }
 
 private:
+    float mazeOffsetX;
+    float mazeOffsetY;
     void updateMovement(float deltaTime, const sf::Vector2f& pacmanPos);
     sf::Vector2f calculateTarget(const sf::Vector2f& pacmanPos);
     void updateState(float deltaTime);
+    std::array<std::array<int, 28>, 31> mazeData;
 
     GhostType type;
     GhostState currentState;

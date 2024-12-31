@@ -37,7 +37,7 @@ const std::array<std::array<int, 28>, 31> MAZE_TEMPLATE = { {
 void Game::reset() {
     position = sf::Vector2f(
         CELL_SIZE * 14.0f + (window.getSize().x - MAZE_WIDTH * CELL_SIZE) / 2.0f,
-        CELL_SIZE * 15.0f + (window.getSize().y - MAZE_HEIGHT * CELL_SIZE) / 2.0f
+        CELL_SIZE * 17.50f + (window.getSize().y - MAZE_HEIGHT * CELL_SIZE) / 2.0f
     );
     pacman.setPosition(position);
     currentDirection = Direction::NONE;
@@ -100,16 +100,23 @@ void Game::initializeGhosts() {
     float offsetX = (windowSize.x - mazeWidth) / 2.0f;
     float offsetY = (windowSize.y - mazeHeight) / 2.0f;
 
-    // Initialize ghost starting positions (in the center ghost house)
+    // Initialize ghost starting positions (in the ghost house)
     sf::Vector2f ghostHouseCenter(
         14.0f * CELL_SIZE + offsetX,
         14.0f * CELL_SIZE + offsetY
     );
 
-    // Initialize each ghost with different positions and types
+    // Set maze offsets for ghosts
+    for (auto& ghost : ghosts) {
+        ghost.setMazeOffsets(offsetX, offsetY);
+        ghost.setMazeData(mazeData);
+    }
+
+    // Initialize each ghost with different positions
     ghosts[0] = Ghost(GhostType::BLINKY,
         sf::Vector2f(ghostHouseCenter.x, ghostHouseCenter.y - CELL_SIZE),
         CELL_SIZE);
+    ghosts[0].setIsReleased(true); // Blinky starts released
 
     ghosts[1] = Ghost(GhostType::PINKY,
         sf::Vector2f(ghostHouseCenter.x - CELL_SIZE, ghostHouseCenter.y),
@@ -123,8 +130,11 @@ void Game::initializeGhosts() {
         sf::Vector2f(ghostHouseCenter.x + CELL_SIZE, ghostHouseCenter.y),
         CELL_SIZE);
 
-    powerMode = false;
-    powerModeTimer = 0.0f;
+    // Set maze data for all ghosts
+    for (auto& ghost : ghosts) {
+        ghost.setMazeOffsets(offsetX, offsetY);
+        ghost.setMazeData(mazeData);
+    }
 }
 
 void Game::updateGhosts(float deltaTime) {
@@ -162,15 +172,26 @@ void Game::updateGhosts(float deltaTime) {
 void Game::checkGhostCollisions() {
     for (auto& ghost : ghosts) {
         if (ghost.isColliding(position, pacman.getRadius())) {
-            if (powerMode && ghost.isFrightened()) {
-                // Ghost is eaten
+            if (powerMode) {
+                // Ghost is vulnerable - eat it
                 ghost.reset();
                 score += 200;
             }
-            else if (!powerMode) {
-                // Pac-Man is caught
-                // TODO: Implement death sequence
+            else {
+                // Pacman dies - reset the game
                 reset();
+                return;
+            }
+        }
+    }
+
+    // Update power mode timer
+    if (powerMode) {
+        powerModeTimer -= clock.restart().asSeconds();
+        if (powerModeTimer <= 0) {
+            powerMode = false;
+            for (auto& ghost : ghosts) {
+                ghost.setFrightened(false);
             }
         }
     }

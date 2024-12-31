@@ -14,15 +14,9 @@ C:\Users\Asus\OneDrive\Desktop\projects\pac-X\External\SFML\include\SFML\System\
       C:\Users\Asus\OneDrive\Desktop\projects\pac-X\External\SFML\include\SFML\System\Exception.hpp(41,23):
       see declaration of 'sf::Exception'
   
-C:\Users\Asus\OneDrive\Desktop\projects\pac-X\pac-X\Ghost.cpp(123,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-C:\Users\Asus\OneDrive\Desktop\projects\pac-X\pac-X\Ghost.cpp(167,20): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
-  main.cpp
-C:\Users\Asus\OneDrive\Desktop\projects\pac-X\External\SFML\include\SFML\System\Exception.hpp(41,47): warning C4275: non dll-interface class 'std::runtime_error' used as base for dll-interface class 'sf::Exception'
-  (compiling source file 'main.cpp')
-      C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.42.34433\include\stdexcept(100,19):
-      see declaration of 'std::runtime_error'
-      C:\Users\Asus\OneDrive\Desktop\projects\pac-X\External\SFML\include\SFML\System\Exception.hpp(41,23):
-      see declaration of 'sf::Exception'
-  
+C:\Users\Asus\OneDrive\Desktop\projects\pac-X\pac-X\Ghost.cpp(97,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\Asus\OneDrive\Desktop\projects\pac-X\pac-X\Ghost.cpp(140,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\Asus\OneDrive\Desktop\projects\pac-X\pac-X\Ghost.cpp(202,28): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
+C:\Users\Asus\OneDrive\Desktop\projects\pac-X\pac-X\Ghost.cpp(246,20): warning C4244: 'initializing': conversion from 'double' to 'float', possible loss of data
   Generating Code...
   pac-X.vcxproj -> C:\Users\Asus\OneDrive\Desktop\projects\pac-X\x64\Debug\pac-X.exe

@@ -58,6 +58,8 @@ private:
     float powerPelletBlinkTimer = 0.0f;
     bool powerPelletBlinkState = false;
 
+    //static constexpr float GHOST_SPEED = 100.0f;
+
 
 public:
     Game(sf::RenderWindow& window);
