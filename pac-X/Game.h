@@ -10,6 +10,7 @@ private:
         DOWN
     };
     sf::RenderWindow& window;
+    sf::Clock clock;
 
     // Pac-Man properties
     sf::CircleShape pacman;
@@ -53,6 +54,10 @@ private:
     void initializeGhosts();
     void updateGhosts(float deltaTime);
     void checkGhostCollisions();
+    const float GHOST_RELEASE_INTERVAL = 5.0f;
+    float powerPelletBlinkTimer = 0.0f;
+    bool powerPelletBlinkState = false;
+
 
 public:
     Game(sf::RenderWindow& window);

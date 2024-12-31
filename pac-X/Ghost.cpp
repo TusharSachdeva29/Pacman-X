@@ -34,6 +34,14 @@ Ghost::Ghost(GhostType type, const sf::Vector2f& startPos, float cellSize)
 
 
 void Ghost::update(float deltaTime, const sf::Vector2f& pacmanPos) {
+    if (currentState == GhostState::FRIGHTENED) {
+        blinkTimer += deltaTime;
+        if (blinkTimer >= BLINK_INTERVAL) {
+            blinkTimer = 0.0f;
+            blinkState = !blinkState;
+            shape.setFillColor(blinkState ? sf::Color::Green : sf::Color::Magenta);
+        }
+    }
     updateState(deltaTime);
     updateMovement(deltaTime, pacmanPos);
     shape.setPosition(position);
@@ -131,8 +139,28 @@ void Ghost::setFrightened(bool frightened) {
         currentState = GhostState::FRIGHTENED;
         stateTimer = FRIGHTENED_DURATION;
         speed = FRIGHTENED_SPEED;
-        shape.setFillColor(sf::Color::Blue);
+        shape.setFillColor(sf::Color::Green); // Different color
     }
+}
+
+bool Ghost::checkCollision(const sf::Vector2f& newPos, const std::array<std::array<int, 28>, 31>& maze, float offsetX, float offsetY, float cellSize) {
+    float radius = shape.getRadius();
+    std::vector<sf::Vector2f> corners = {
+        sf::Vector2f(newPos.x - radius, newPos.y - radius),
+        sf::Vector2f(newPos.x + radius, newPos.y - radius),
+        sf::Vector2f(newPos.x - radius, newPos.y + radius),
+        sf::Vector2f(newPos.x + radius, newPos.y + radius)
+    };
+
+    for (const auto& corner : corners) {
+        int gridX = static_cast<int>((corner.x - offsetX) / cellSize);
+        int gridY = static_cast<int>((corner.y - offsetY) / cellSize);
+
+        if (gridX >= 0 && gridX < 28 && gridY >= 0 && gridY < 31) {
+            if (maze[gridY][gridX] == 1) return true;
+        }
+    }
+    return false;
 }
 
 bool Ghost::isColliding(const sf::Vector2f& pacmanPos, float pacmanRadius) {

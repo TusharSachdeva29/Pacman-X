@@ -66,6 +66,7 @@ Game::Game(sf::RenderWindow& gameWindow) :
         Ghost(GhostType::CLYDE, sf::Vector2f(), CELL_SIZE) 
     } {// Explicitly initialize each Ghost object
 
+
     float mazeWidth = MAZE_WIDTH * CELL_SIZE;
     float mazeHeight = MAZE_HEIGHT * CELL_SIZE;
     sf::Vector2u windowSize = window.getSize();
@@ -79,7 +80,7 @@ Game::Game(sf::RenderWindow& gameWindow) :
 
     position = sf::Vector2f(
         CELL_SIZE * 14.0f + offsetX,
-        CELL_SIZE * 15.0f + offsetY
+        CELL_SIZE * 17.50f + offsetY
     );
     pacman.setPosition(position);
 
@@ -127,20 +128,37 @@ void Game::initializeGhosts() {
 }
 
 void Game::updateGhosts(float deltaTime) {
-    if (powerMode) {
-        powerModeTimer -= deltaTime;
-        if (powerModeTimer <= 0.0f) {
-            powerMode = false;
-            for (auto& ghost : ghosts) {
-                ghost.setFrightened(false);
+    static float timeSinceLastRelease = 0.0f;
+
+    if (!ghosts[0].getIsReleased()) {
+        ghosts[0].setIsReleased(true);
+    }
+    else {
+        timeSinceLastRelease += deltaTime;
+        if (timeSinceLastRelease >= GHOST_RELEASE_INTERVAL) {
+            for (size_t i = 1; i < ghosts.size(); ++i) {
+                if (!ghosts[i].getIsReleased()) {
+                    ghosts[i].setIsReleased(true);
+                    timeSinceLastRelease = 0.0f;
+                    break;
+                }
             }
         }
     }
 
     for (auto& ghost : ghosts) {
-        ghost.update(deltaTime, position);
+        if (ghost.getIsReleased()) {
+            ghost.update(deltaTime, position);
+        }
+        else {
+            ghost.setPositionY(ghost.getStartPositionY() + std::sin(ghost.getReleaseTimer() * 2.0f) * 5.0f);
+            ghost.setReleaseTimer(ghost.getReleaseTimer() + deltaTime);
+            ghost.setShapePosition(ghost.getPosition());
+        }
     }
 }
+
+
 void Game::checkGhostCollisions() {
     for (auto& ghost : ghosts) {
         if (ghost.isColliding(position, pacman.getRadius())) {
@@ -178,8 +196,6 @@ void Game::update(float deltaTime) {
     checkGhostCollisions();
     checkDotCollection();
 }
-
-
 
 void Game::createDots() {
     sf::Vector2u windowSize = window.getSize();
@@ -222,13 +238,6 @@ void Game::createDots() {
         }
     }
 }
-
-
-
-
-
-
-
 
 bool Game::checkCollision(const sf::Vector2f& newPos) {
     // Get the grid positions for each corner of Pac-Man
@@ -428,6 +437,11 @@ void Game::moveInDirection(Direction dir, float deltaTime) {
 }
 
 void Game::render() {  
+    powerPelletBlinkTimer += clock.restart().asSeconds();
+    if (powerPelletBlinkTimer >= 0.2f) {
+        powerPelletBlinkTimer = 0.0f;
+        powerPelletBlinkState = !powerPelletBlinkState;
+    }
    // Draw walls  
    for (const auto& wall : walls) {  
        window.draw(wall);  
@@ -439,15 +453,18 @@ void Game::render() {
    }  
 
    // Draw power pellets  
-   for (const auto& pellet : powerPellets) {  
-       window.draw(pellet);  
-   }  
+   for (const auto& pellet : powerPellets) {
+       if (!powerPelletBlinkState) {
+           window.draw(pellet);
+       }
+   }
 
    // Draw Pac-Man  
    window.draw(pacman);  
 
    // Draw ghosts  
-   for (auto& ghost : ghosts) {  
-       ghost.render(window);  
-   }  
+   for (auto& g : ghosts) {
+       g.render(window);
+   }
+
 }
