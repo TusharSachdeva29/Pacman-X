@@ -1,5 +1,6 @@
-#include "Ghost.h"
+﻿#include "Ghost.h"
 #include <cmath>
+#include "Game.h"
 
 Ghost::Ghost(GhostType type, const sf::Vector2f& startPos, float cellSize)
     : type(type),
@@ -85,7 +86,13 @@ void Ghost::updateState(float deltaTime) {
     }
 }
 void Ghost::updateMovement(float deltaTime, const sf::Vector2f& pacmanPos) {
-    if (!isReleased) return;
+    if (!isReleased) {
+        // Smooth up-down movement while in house
+        float yOffset = std::sin(stateTimer * GHOST_HOUSE_MOVE_SPEED) * GHOST_HOUSE_MOVE_AMPLITUDE;
+        position.y = startPosition.y + yOffset;
+        shape.setPosition(position);
+        return;
+    }
 
     // Get current grid position
     sf::Vector2f currentGridPos = {
@@ -110,7 +117,7 @@ void Ghost::updateMovement(float deltaTime, const sf::Vector2f& pacmanPos) {
         };
 
         // Remove opposite direction unless no other choice
-        if (direction != sf::Vector2f(0, 0)) {
+     /*   if (direction != sf::Vector2f(0, 0)) {
             possibleDirs.erase(
                 std::remove_if(possibleDirs.begin(), possibleDirs.end(),
                     [this](const sf::Vector2f& dir) {
@@ -118,7 +125,7 @@ void Ghost::updateMovement(float deltaTime, const sf::Vector2f& pacmanPos) {
                     }),
                 possibleDirs.end()
             );
-        }
+        }*/
 
         // Filter out directions that would hit walls
         possibleDirs.erase(
@@ -165,6 +172,8 @@ void Ghost::updateMovement(float deltaTime, const sf::Vector2f& pacmanPos) {
 }
 
 sf::Vector2f Ghost::calculateTarget(const sf::Vector2f& pacmanPos) {
+    int pacmanGridX = static_cast<int>((pacmanPos.x - mazeOffsetX) / cellSize);
+    int pacmanGridY = static_cast<int>((pacmanPos.y - mazeOffsetY) / cellSize);
     switch (currentState) {
     case GhostState::FRIGHTENED:
         // Random movement
@@ -174,12 +183,16 @@ sf::Vector2f Ghost::calculateTarget(const sf::Vector2f& pacmanPos) {
         );
 
     case GhostState::SCATTER:
-        // Return to corner based on ghost type
+        // Each ghost returns to their corner
         switch (type) {
-        case GhostType::BLINKY: return sf::Vector2f(26 * cellSize, 0);
-        case GhostType::PINKY:  return sf::Vector2f(2 * cellSize, 0);
-        case GhostType::INKY:   return sf::Vector2f(26 * cellSize, 30 * cellSize);
-        case GhostType::CLYDE:  return sf::Vector2f(0, 30 * cellSize);
+        case GhostType::BLINKY:
+            return sf::Vector2f(26 * cellSize + mazeOffsetX, mazeOffsetY);
+        case GhostType::PINKY:
+            return sf::Vector2f(2 * cellSize + mazeOffsetX, mazeOffsetY);
+        case GhostType::INKY:
+            return sf::Vector2f(26 * cellSize + mazeOffsetX, 30 * cellSize + mazeOffsetY);
+        case GhostType::CLYDE:
+            return sf::Vector2f(mazeOffsetX, 30 * cellSize + mazeOffsetY);
         }
 
     case GhostState::CHASE:
@@ -189,22 +202,46 @@ sf::Vector2f Ghost::calculateTarget(const sf::Vector2f& pacmanPos) {
             // Direct chase
             return pacmanPos;
 
-        case GhostType::PINKY:
-            // Target 4 tiles ahead of Pac-Man
-            return pacmanPos + direction * (4 * cellSize);
+        case GhostType::PINKY: {
+            // Target 4 cells ahead of Pacman
+            sf::Vector2f targetPos = pacmanPos;
+            sf::Vector2f pacmanDir = direction; // Current pacman direction
+            targetPos.x += pacmanDir.x * (4 * cellSize);
+            targetPos.y += pacmanDir.y * (4 * cellSize);
+            return targetPos;
+        }
 
-        case GhostType::INKY:
-            // Complex targeting (simplified for now)
+        case GhostType::INKY: {
+            // Get position 2 tiles ahead of Pacman
+            //sf::Vector2f intermediatePos = pacmanPos;
+            //sf::Vector2f pacmanDir = direction;
+            //intermediatePos.x += pacmanDir.x * (2 * cellSize);
+            //intermediatePos.y += pacmanDir.y * (2 * cellSize);
+
+            //// Get vector from Blinky to this position and double it
+            //sf::Vector2f blinkyPos = ghosts[0].getPosition(); // Assuming Blinky is first ghost
+            //sf::Vector2f targetVector = intermediatePos - blinkyPos;
+            //return blinkyPos + targetVector * 2.0f;
             return pacmanPos;
+        }
 
-        case GhostType::CLYDE:
-            // Random movement when far, scatter when close
+case GhostType::CLYDE: {
+            // Calculate distance to Pacman
             float distance = std::sqrt(
                 std::pow(position.x - pacmanPos.x, 2) +
                 std::pow(position.y - pacmanPos.y, 2)
             );
-            return (distance > 8 * cellSize) ? pacmanPos : startPosition;
-        }
+            
+            // If more than 8 tiles away, chase Pacman
+            // If closer than 8 tiles, go to scatter corner
+            if (distance > 8 * cellSize) {
+                return pacmanPos;
+            }
+            else {
+                return sf::Vector2f(mazeOffsetX, 30 * cellSize + mazeOffsetY);
+            }
+}
+		}
 
     case GhostState::EATEN:
         return startPosition;

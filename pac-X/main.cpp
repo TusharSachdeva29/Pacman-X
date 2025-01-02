@@ -4,7 +4,7 @@
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode({1500,1500}), "Pac-Man");
+    sf::RenderWindow window(sf::VideoMode({ 1500,1500 }), "Pac-Man");
     window.setFramerateLimit(60);
 
     Game game(window);

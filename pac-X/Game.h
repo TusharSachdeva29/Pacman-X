@@ -64,10 +64,11 @@ private:
 public:
     Game(sf::RenderWindow& window);
 
+
     void handleEvent(const sf::Event& event);
     void handleInput(float deltaTime);
     void update(float deltaTime);
-	void render();  
+    void render();
     int getScore() const { return score; }
     void reset();
     Direction currentDirection; // Add this line

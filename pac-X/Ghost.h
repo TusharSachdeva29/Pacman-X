@@ -68,7 +68,7 @@ public:
     float getBlinkTimer() const { return blinkTimer; }
     void setBlinkState(bool state) { blinkState = state; }
     void setBlinkTimer(float timer) { blinkTimer = timer; }
-   
+
     float getReleaseTimer() const { return releaseTimer; }
     void setReleaseTimer(float timer) { releaseTimer = timer; }
     bool getIsReleased() const { return isReleased; }
@@ -80,12 +80,16 @@ public:
     float getStartPositionY() const { return startPosition.y; }
     void setPositionY(float y) { position.y = y; }
     void setMazeData(const std::array<std::array<int, 28>, 31>& maze) { mazeData = maze; }
-        //void setMazeOffsets(float offsetX, float offsetY);
+    //void setMazeOffsets(float offsetX, float offsetY);
     void setMazeOffsets(float offsetX, float offsetY) {
         mazeOffsetX = offsetX;
         mazeOffsetY = offsetY;
     }
     void setShapePosition(const sf::Vector2f& pos) { shape.setPosition(pos); }
+
+    const float GHOST_HOUSE_MOVE_AMPLITUDE = 5.0f;
+    const float GHOST_HOUSE_MOVE_SPEED = 2.0f;
+    const std::array<float, 4> GHOST_RELEASE_TIMES = { 0.0f, 5.0f, 10.0f, 15.0f };
 
 private:
     float mazeOffsetX;

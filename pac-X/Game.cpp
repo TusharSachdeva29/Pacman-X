@@ -1,3 +1,4 @@
+
 #include "Game.h"
 #include <iostream>
 
@@ -57,13 +58,13 @@ Game::Game(sf::RenderWindow& gameWindow) :
     score(0),
     currentDirection(Direction::NONE),
     queuedDirection(Direction::NONE),
-	powerMode(false),
-	powerModeTimer(0.0f),
-    ghosts{ 
-        Ghost(GhostType::BLINKY, sf::Vector2f(), CELL_SIZE), 
-        Ghost(GhostType::PINKY, sf::Vector2f(), CELL_SIZE), 
-        Ghost(GhostType::INKY, sf::Vector2f(), CELL_SIZE), 
-        Ghost(GhostType::CLYDE, sf::Vector2f(), CELL_SIZE) 
+    powerMode(false),
+    powerModeTimer(0.0f),
+    ghosts{
+        Ghost(GhostType::BLINKY, sf::Vector2f(), CELL_SIZE),
+        Ghost(GhostType::PINKY, sf::Vector2f(), CELL_SIZE),
+        Ghost(GhostType::INKY, sf::Vector2f(), CELL_SIZE),
+        Ghost(GhostType::CLYDE, sf::Vector2f(), CELL_SIZE)
     } {// Explicitly initialize each Ghost object
 
 
@@ -90,7 +91,7 @@ Game::Game(sf::RenderWindow& gameWindow) :
     initializeMaze();
     createWalls();
     createDots();
-	initializeGhosts();
+    initializeGhosts();
 }
 
 void Game::initializeGhosts() {
@@ -137,34 +138,25 @@ void Game::initializeGhosts() {
     }
 }
 
-void Game::updateGhosts(float deltaTime) {
-    static float timeSinceLastRelease = 0.0f;
+static const std::array<float, 4> GHOST_RELEASE_TIMES = { 0.0f, 5.0f, 10.0f, 15.0f };
 
-    if (!ghosts[0].getIsReleased()) {
-        ghosts[0].setIsReleased(true);
-    }
-    else {
-        timeSinceLastRelease += deltaTime;
-        if (timeSinceLastRelease >= GHOST_RELEASE_INTERVAL) {
-            for (size_t i = 1; i < ghosts.size(); ++i) {
-                if (!ghosts[i].getIsReleased()) {
-                    ghosts[i].setIsReleased(true);
-                    timeSinceLastRelease = 0.0f;
-                    break;
-                }
+void Game::updateGhosts(float deltaTime) {
+    static std::vector<float> releaseTimers(4, 0.0f);
+
+    // Update release timers and release ghosts
+    for (size_t i = 0; i < ghosts.size(); ++i) {
+        if (!ghosts[i].getIsReleased()) {
+            releaseTimers[i] += deltaTime;
+            if (releaseTimers[i] >= GHOST_RELEASE_TIMES[i]) {
+                ghosts[i].setIsReleased(true);
+                releaseTimers[i] = 0.0f;
             }
         }
     }
 
+    // Update all ghosts
     for (auto& ghost : ghosts) {
-        if (ghost.getIsReleased()) {
-            ghost.update(deltaTime, position);
-        }
-        else {
-            ghost.setPositionY(ghost.getStartPositionY() + std::sin(ghost.getReleaseTimer() * 2.0f) * 5.0f);
-            ghost.setReleaseTimer(ghost.getReleaseTimer() + deltaTime);
-            ghost.setShapePosition(ghost.getPosition());
-        }
+        ghost.update(deltaTime, position);
     }
 }
 
@@ -287,22 +279,22 @@ bool Game::checkCollision(const sf::Vector2f& newPos) {
 
 
 void Game::checkDotCollection() {
-	sf::Vector2f gridPos = getGridPosition(position);
-	int gridX = static_cast<int>(gridPos.x);
-	int gridY = static_cast<int>(gridPos.y);
-	for (auto it = dots.begin(); it != dots.end(); ) {
-		sf::Vector2f dotPos = it->getPosition();
-		sf::Vector2f dotGridPos = getGridPosition(dotPos);
-		int dotGridX = static_cast<int>(dotGridPos.x);
-		int dotGridY = static_cast<int>(dotGridPos.y);
-		if (gridX == dotGridX && gridY == dotGridY) {
-			it = dots.erase(it);
-			score += 10;
-		}
-		else {
-			++it;
-		}
-	}
+    sf::Vector2f gridPos = getGridPosition(position);
+    int gridX = static_cast<int>(gridPos.x);
+    int gridY = static_cast<int>(gridPos.y);
+    for (auto it = dots.begin(); it != dots.end(); ) {
+        sf::Vector2f dotPos = it->getPosition();
+        sf::Vector2f dotGridPos = getGridPosition(dotPos);
+        int dotGridX = static_cast<int>(dotGridPos.x);
+        int dotGridY = static_cast<int>(dotGridPos.y);
+        if (gridX == dotGridX && gridY == dotGridY) {
+            it = dots.erase(it);
+            score += 10;
+        }
+        else {
+            ++it;
+        }
+    }
     for (auto it = powerPellets.begin(); it != powerPellets.end(); ) {
         sf::Vector2f pelletPos = it->getPosition();
         sf::Vector2f pelletGridPos = getGridPosition(pelletPos);
@@ -457,35 +449,35 @@ void Game::moveInDirection(Direction dir, float deltaTime) {
     }
 }
 
-void Game::render() {  
+void Game::render() {
     powerPelletBlinkTimer += clock.restart().asSeconds();
     if (powerPelletBlinkTimer >= 0.2f) {
         powerPelletBlinkTimer = 0.0f;
         powerPelletBlinkState = !powerPelletBlinkState;
     }
-   // Draw walls  
-   for (const auto& wall : walls) {  
-       window.draw(wall);  
-   }  
+    // Draw walls  
+    for (const auto& wall : walls) {
+        window.draw(wall);
+    }
 
-   // Draw dots  
-   for (const auto& dot : dots) {  
-       window.draw(dot);  
-   }  
+    // Draw dots  
+    for (const auto& dot : dots) {
+        window.draw(dot);
+    }
 
-   // Draw power pellets  
-   for (const auto& pellet : powerPellets) {
-       if (!powerPelletBlinkState) {
-           window.draw(pellet);
-       }
-   }
+    // Draw power pellets  
+    for (const auto& pellet : powerPellets) {
+        if (!powerPelletBlinkState) {
+            window.draw(pellet);
+        }
+    }
 
-   // Draw Pac-Man  
-   window.draw(pacman);  
+    // Draw Pac-Man  
+    window.draw(pacman);
 
-   // Draw ghosts  
-   for (auto& g : ghosts) {
-       g.render(window);
-   }
+    // Draw ghosts  
+    for (auto& g : ghosts) {
+        g.render(window);
+    }
 
 }
