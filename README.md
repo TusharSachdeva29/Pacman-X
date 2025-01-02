@@ -35,5 +35,17 @@ Power Pellet: 50 points
 Eating a Ghost: 200 points (doubles for each successive ghost in the same power-up period)
 
 Lives:
-
 You start with 3 lives. A life is lost if a ghost catches you.
+
+
+Planned Improvements
+
+Multiple levels with increasing difficulty.
+
+Improved ghost AI for more challenging gameplay.
+
+Enhanced graphics and sound effects.
+
+Leaderboard for high scores.
+
+Support for multiplayer mode.
